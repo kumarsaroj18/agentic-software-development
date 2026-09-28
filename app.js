@@ -20,8 +20,78 @@ let tabSwitcherHighlightedIndex = 0;
 let tabSwitcherCurrentResults = [];
 let allTabs = [];
 
+// Mobile navigation state
+let mobileNavOpen = false;
+let currentTabName = '';
+
 // Filter state per tab
 let tabFilters = {}; // { tabName: { agentRecommended: Set, areaPillar: Set } }
+
+// Mobile navigation functions
+function toggleMobileNav() {
+    mobileNavOpen = !mobileNavOpen;
+    const toggle = document.getElementById('mobileNavToggle');
+    const mobileNavTabs = document.getElementById('mobileNavTabs');
+    
+    if (mobileNavOpen) {
+        toggle.classList.add('active');
+        mobileNavTabs.classList.add('active');
+    } else {
+        toggle.classList.remove('active');
+        mobileNavTabs.classList.remove('active');
+    }
+}
+
+function closeMobileNav() {
+    mobileNavOpen = false;
+    const toggle = document.getElementById('mobileNavToggle');
+    const mobileNavTabs = document.getElementById('mobileNavTabs');
+    toggle?.classList.remove('active');
+    mobileNavTabs?.classList.remove('active');
+}
+
+function updateMobileNavLabel(tabName) {
+    const toggle = document.getElementById('mobileNavToggle');
+    if (toggle) {
+        const labelSpan = toggle.querySelector('.current-tab-name');
+        if (labelSpan) {
+            labelSpan.textContent = tabName;
+        }
+    }
+    currentTabName = tabName;
+}
+
+function initMobileNav() {
+    const mobileNavTabs = document.getElementById('mobileNavTabs');
+    if (!mobileNavTabs) return;
+    
+    const tabNames = Object.keys(DATA);
+    tabNames.forEach((tabName, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (index === 0 ? ' active' : '');
+        btn.innerHTML = `${tabName}<span class="count-badge">${DATA[tabName].length}</span>`;
+        btn.onclick = () => {
+            switchTab(tabName);
+            closeMobileNav();
+        };
+        mobileNavTabs.appendChild(btn);
+    });
+    
+    // Set initial tab name
+    if (tabNames.length > 0) {
+        updateMobileNavLabel(tabNames[0]);
+    }
+    
+    // Close mobile nav when clicking outside
+    document.addEventListener('click', (e) => {
+        if (mobileNavOpen) {
+            const mobileNavContainer = document.querySelector('.mobile-nav-container');
+            if (mobileNavContainer && !mobileNavContainer.contains(e.target)) {
+                closeMobileNav();
+            }
+        }
+    });
+}
 
 function initApp() {
     const tabsContainer = document.getElementById('tabs');
@@ -151,6 +221,9 @@ function initApp() {
     
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
+    
+    // Initialize mobile navigation
+    initMobileNav();
     
     // Update visible cards for the initial tab
     updateVisibleCards();
@@ -825,7 +898,8 @@ function clearCardSelection() {
 // ==================== TAB SWITCHING ====================
 
 function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    // Update desktop tabs
+    document.querySelectorAll('#tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(section => section.classList.remove('active'));
 
     const targetId = `tab-${tabName.replace(/[^a-zA-Z0-9]/g, '-')}`;
@@ -834,9 +908,18 @@ function switchTab(tabName) {
         targetSection.classList.add('active');
     }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('#tabs .tab-btn').forEach(btn => {
         if (btn.textContent.startsWith(tabName)) btn.classList.add('active');
     });
+    
+    // Update mobile nav tabs
+    document.querySelectorAll('#mobileNavTabs .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.startsWith(tabName)) btn.classList.add('active');
+    });
+    
+    // Update mobile nav label
+    updateMobileNavLabel(tabName);
     
     updateVisibleCards();
 }
